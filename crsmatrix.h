@@ -1,4 +1,4 @@
-#ifndef CRSMATRIX_H
-#define CRSMATRIX_H
+#ifndef SRSMATRIX_H
+#define SRSMATRIX_H
 
-#endif // CRSMATRIX_H
+#endif // SRSMATRIX_H
