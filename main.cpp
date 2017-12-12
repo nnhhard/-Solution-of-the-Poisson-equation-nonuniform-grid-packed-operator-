@@ -2,8 +2,8 @@
 #include <math.h>
 #include <crsmatrix.h>
 
-#define N 10
-#define M 10
+#define N 20
+#define M 20
 
 double a_x = 0, b_x = 1;
 double a_y = 0, b_y = 1;
@@ -12,8 +12,8 @@ const int flag = 1;
 
 /*
  * if flag == 0 then solve by min result (Operator)
- * if flag == 1 then solve by min result (CSR Matrix)
- * if flag == 2 then solve by Gaus (Matrix)
+ * if flag == 1 then solve by Gaus (Matrix)
+ * if flag == 2 then solve by min result (CSR Matrix)
  */
 
 double Norm(double *vector, int ln) {
@@ -60,42 +60,17 @@ void null(double **vector, int ln, int lm) {
         for(int j = 0; j <= lm; j++)
             vector[i][j]=0;
 }
-
 double Function(double x, double y){
-    //return sin(M_PI * x) * sin(M_PI * y);
-    return x * x + y * y;
+    return sin(M_PI * x) * sin(M_PI * y);
+    //return x * x + y * y;
 }
-double RightPart(int ln, int lm, double x, double y, int i, int j) {
-    if( (i == 0 && j == 0) || (i == 0 && j == lm) || (i == ln && j == 0) || (i == ln && j == lm) )
-           return Function(x, y);
-       else if(i==0)
-           return Function(x, y);
-       else if(i == ln)
-           return Function(x, y);
-       else if(j == 0)
-           return Function(x, y);
-       else if(j == lm)
-           return Function(x, y);
-       else
-           //return -2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
-           return 4;
+double RightPart(double x, double y) {
+    return -2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
+    //return 4;
 }
-
-
-double Operator(double **vector, int ln, int lm, int i, int j, double *hx, double *hy) {
-    if( (i == 0 && j == 0) || (i == 0 && j == lm) || (i == ln && j == 0) || (i == ln && j == lm) )
-            return vector[i][j];
-        else if(i==0)
-            return vector[i][j];
-        else if(i==ln)
-            return vector[i][j];
-        else if(j==0)
-            return vector[i][j];
-        else if(j==lm)
-            return vector[i][j];
-        else
-            return ( ( ( ( vector[i+1][j] - vector[i][j] ) / (hx[i]) ) - ( ( vector[i][j] - vector[i-1][j] ) / (hx[i-1] ) ) ) / ( ( hx[i] + hx[i-1] ) / 2.0 ) )
-                 + ( ( ( ( vector[i][j+1] - vector[i][j] ) / (hy[j]) ) - ( ( vector[i][j] - vector[i][j-1] ) / (hy[j-1] ) ) ) / ( ( hy[j] + hy[j-1] ) / 2.0 ) );
+double Operator(double **vector, int i, int j, double *hx, double *hy) {
+    return ( ( ( ( vector[i+1][j] - vector[i][j] ) / (hx[i]) ) - ( ( vector[i][j] - vector[i-1][j] ) / (hx[i-1] ) ) ) / ( ( hx[i] + hx[i-1] ) / 2.0 ) )
+         + ( ( ( ( vector[i][j+1] - vector[i][j] ) / (hy[j]) ) - ( ( vector[i][j] - vector[i][j-1] ) / (hy[j-1] ) ) ) / ( ( hy[j] + hy[j-1] ) / 2.0 ) );
 }
 void SolveByMinResultOperator(double **u, double **mask_u, int ln, int lm, double *x, double *y, double *hx, double *hy) {
     for(int i = 0; i <= ln; i++){
@@ -128,13 +103,13 @@ void SolveByMinResultOperator(double **u, double **mask_u, int ln, int lm, doubl
     for(int i = 0; i <= ln; i++)
         for(int j = 0; j <= lm; j++)
             if(mask_u[i][j] != 0)
-                r[i][j] = Operator(u,ln,lm,i,j,hx,hy) - RightPart(ln,lm,x[i],y[j],i,j);
+                r[i][j] = Operator(u,i,j,hx,hy) - RightPart(x[i],y[j]);
 
 
     for(int i = 0; i <= ln; i++)
         for(int j = 0; j <= lm; j++)
             if(mask_u[i][j] != 0)
-                ar[i][j] = Operator(r,ln,lm,i,j,hx,hy);
+                ar[i][j] = Operator(r,i,j,hx,hy);
 
     double tau = Sc(r,ar,ln,lm)/Sc(ar,ar,ln,lm);
 
@@ -149,12 +124,12 @@ void SolveByMinResultOperator(double **u, double **mask_u, int ln, int lm, doubl
         for(int i = 0; i <= ln; i++)
             for(int j = 0; j <= lm; j++)
                 if(mask_u[i][j] != 0)
-                    r[i][j] = Operator(u1,ln,lm,i,j,hx,hy) - RightPart(ln,lm,x[i],y[j],i,j);
+                    r[i][j] = Operator(u1,i,j,hx,hy) - RightPart(x[i],y[j]);
 
         for(int i = 0; i <= ln; i++)
             for(int j = 0; j <= lm; j++)
                 if(mask_u[i][j] != 0)
-                    ar[i][j]=Operator(r,ln,lm,i,j,hx,hy);
+                    ar[i][j]=Operator(r,i,j,hx,hy);
 
         tau = Sc(r,ar,ln,lm)/Sc(ar,ar,ln,lm);
 
@@ -224,7 +199,7 @@ void SolveByMinResultMatrix(CRS_Matrix &mat, double *b, double *x) {
 
         tau = Sc(r,ar,mat.m)/Sc(ar,ar,mat.m);
 
-        printf("Norm = %lf\n",Norm(r,mat.m));
+        //printf("Norm = %lf\n",Norm(r,mat.m));
     }
 
 
@@ -253,91 +228,160 @@ void SolveByGaus(double **A,double *B,double *x,int ln) {
     }
 
 }
-void getVectorOfRightPart(double *b, int ln, int lm, double *x, double *y) {
-    double  **f = new double*[ln+1];
-    for(int i = 0 ;i <= ln; i++)
-        f[i] = new double[lm+1];
+double** getMatrixOfOperator(int L, double **mask, int ln, int lm,double *hx, double *hy) {
+        double  **A=new double*[L];
+        for(int i = 0; i < L; i++)
+            A[i]=new double[L];
 
-    for(int i = 0; i <= ln; i++) {
-        for(int j = 0; j <= lm ; j++) {
-            f[i][j] = RightPart(ln,lm,x[i],y[j],i,j);
+        double **e = new double*[ln + 1];
+        for(int i = 0; i <= ln; i++) {
+            e[i] = new double[lm + 1];
         }
-    }
-    for(int i = 0; i <= ln; i++) {
-        for(int j = 0; j <= lm; j++) {
-            b[(lm+1)*i+j]=f[i][j];
+
+        double **a = new double*[ln + 1];
+        for(int i = 0; i <= ln; i++) {
+            a[i] = new double[lm + 1];
         }
-    }
 
+        double **mask_temp = new double*[ln + 1];
+        for(int i = 0; i <= ln; i++) {
+            mask_temp[i] = new double[lm + 1];
+        }
 
-    for(int i=0;i<=ln;i++) {
-        delete []f[i];
-    }
-    delete []f;
-}
-void getMatrixOfOperator(double **A, int ln, int lm,double *hx, double *hy) {
-    double *F1=new double[(ln + 1) * (lm + 1)];
+        for(int i=0;i<=ln;i++) {
+            for(int j=0;j<=lm;j++) {
+                mask_temp[i][j] = mask[i][j];
+            }
+        }
 
-    double  **e=new double*[ln + 1];
-    for(int i = 0; i <= ln; i++)
-        e[i] = new double[lm + 1];
+        for(int i=0;i<=ln;i++) {
+            for(int j=0;j<=lm;j++) {
+                if(mask[i][j] == 0)
+                    e[i][j] = 0;
+            }
+        }
 
-    double  **u1=new double*[ln + 1];
-    for(int i = 0; i<= ln; i++)
-        u1[i] = new double[lm+1];
-
-    int q = 0;
-    int l = 0;
-    for(int k = 0; k < ( (ln + 1) * (lm + 1)); k++)
-    {
-
-        for(int i = 0; i <= ln; i++)
-        {
-            for(int j = 0; j <= lm; j++)
-            {
+        for(int i=0;i<=ln;i++) {
+            for(int j=0;j<=lm;j++) {
                 e[i][j] = 0;
             }
         }
-        e[q][l] = 1;
-        l++;
-        if(l > lm)
-        {
-            l = 0;
-            q++;
-        }
 
+        bool flag_break = 0;
+        int i_fixed = 0;
+        int j_fixed = 0;
 
-        for(int i = 0; i <= ln; i++)
+        for(int k = 0; k < L; k++)
         {
-            for(int j = 0; j <= lm; j++)
-            {
-                u1[i][j] = Operator(e,ln,lm,i,j,hx,hy);
+
+            for(int i = 0; i <= ln; i++) {
+                for(int j = 0; j <= lm; j++) {
+                    if(mask_temp[i][j] != 0) {
+                        e[i][j] = 1;
+                        mask_temp[i][j] = 0;
+                        i_fixed = i;
+                        j_fixed = j;
+                        flag_break = 1;
+                        break;
+                    }
+                }
+                if(flag_break == 1)
+                    break;
             }
-        }
 
 
-        for(int i = 0; i <= ln; i++)
-        {
-            for(int j = 0; j <= lm; j++)
-            {
-                F1[(lm + 1) * i + j] = u1[i][j];
+            for(int i = 0; i <= ln; i++) {
+                for(int j = 0; j <= lm; j++) {
+                    a[i][j] = 0;
+                    if(mask[i][j] != 0){
+                        a[i][j] = Operator(e,i,j,hx,hy);
+
+                    }
+                }
             }
+
+            int q = 0;
+            for(int i = 0; i <= ln; i++) {
+                for(int j = 0; j <= lm; j++) {
+                    if(mask[i][j] != 0) {
+                        A[q][k] = a[i][j];
+                        q++;
+                    }
+                }
+            }
+
+            flag_break = 0;
+            e[i_fixed][j_fixed] = 0;
         }
 
-        for(int i = 0; i < ((ln + 1) * (lm + 1)); i++)
-        {
-            A[i][k] = F1[i];
+        for(int i = 0; i <= lm; i++) {
+            delete []e[i];
+            delete []a[i];
+            delete []mask_temp[i];
+        }
+        delete []e;
+        delete []a;
+        delete []mask_temp;
+        e = NULL;
+        a = NULL;
+        mask_temp = NULL;
+        return A;
+}
+double* getVectorOfRightPart(int L,double **mask, int ln, int lm, double *x, double *y,double *hx,double *hy) {
+    double *b=new double[L];
+
+    double **f = new double*[ln+1];
+    for(int i=0;i<=ln;i++) {
+        f[i] = new double[lm+1];
+    }
+
+    for(int i=0;i<=ln;i++) {
+        for(int j=0;j<=lm;j++) {
+            if(mask[i][j] != 0)
+                f[i][j]=RightPart(x[i],y[j]);
+            else
+                f[i][j]=0;
         }
     }
-    delete []F1;
 
-    for(int i = 0; i <= ln; i++)
-    {
-        delete []e[i];
-        delete []u1[i];
+    double **z = new double*[ln+1];
+    for(int i=0;i<=ln;i++) {
+        z[i] = new double[lm+1];
     }
-    delete []e;
-    delete []u1;
+    for(int i=0;i<=ln;i++) {
+        for(int j=0;j<=lm;j++) {
+            if(mask[i][j] == 0)
+                z[i][j] = Function(x[i],y[j]);
+            else
+                z[i][j] = 0;
+        }
+    }
+
+    for(int i=0;i<=ln;i++) {
+        for(int j=0;j<=lm;j++) {
+            if(mask[i][j] != 0)
+                f[i][j] = - Operator(z,i,j,hx,hy) + f[i][j];
+        }
+    }
+
+    int k=0;
+    for(int i=0;i<=ln;i++) {
+        for(int j=0;j<=lm;j++) {
+            if(mask[i][j] != 0) {
+                b[k] = f[i][j];
+                k++;
+            }
+        }
+    }
+    for(int i = 0; i <= lm; i++) {
+        delete []f[i];
+        delete []z[i];
+    }
+    delete []f;
+    delete []z;
+    f = NULL;
+    z = NULL;
+    return b;
 }
 void Solve(double **u, double **mask_u, int ln, int lm, double *x, double *y, double *hx, double *hy) {
     if(flag == 0) {
@@ -347,54 +391,82 @@ void Solve(double **u, double **mask_u, int ln, int lm, double *x, double *y, do
     }
     else if(flag == 1) {
         printf("Get Matrix and Vector: start\n");
-        int L = (ln + 1) * (lm + 1);
-        double *b=new double[L];
-        getVectorOfRightPart(b,ln,lm,x,y);
+        int L = (ln + 1 - 2) * (lm + 1 - 2);
+
+        double *b = getVectorOfRightPart(L,mask_u,ln,lm,x,y,hx,hy);
+
+
+        double  **A = getMatrixOfOperator(L,mask_u,ln,lm,hx,hy);
 
         double *vec_u=new double[L];
-
-        double  **A=new double*[L];
-        for(int i = 0; i < L; i++)
-            A[i]=new double[L];
-
-        getMatrixOfOperator(A,ln,lm,hx,hy);
-        printf("Get Matrix and Vector: end\n");
-
-        printf("Convert Matrix to CRS: start\n");
-        CRS_Matrix mat = ConvertToCRS((const double**)A,L,L);
-        printf("Convert Matrix to CRS: end\n");
-        printf("SolveByMinResultMatrix: start\n");
-        SolveByMinResultMatrix(mat,b,vec_u);
-        printf("SolveByMinResultMatrix: end\n");
-        for(int i=0;i<=ln;i++) {
-            for(int j=0;j<=lm;j++) {
-                u[i][j]=vec_u[(lm+1)*i+j];
-            }
-        }
-    }
-    else if(flag == 2) {
-        printf("Get Matrix and Vector: start\n");
-        int L = (ln + 1) * (lm + 1);
-        double *b=new double[L];
-        getVectorOfRightPart(b,ln,lm,x,y);
-
-        double *vec_u=new double[L];
-
-        double  **A=new double*[L];
-        for(int i = 0; i < L; i++)
-            A[i]=new double[L];
-
-        getMatrixOfOperator(A,ln,lm,hx,hy);
         printf("Get Matrix and Vector: end\n");
 
         printf("SolveByGaus: start\n");
         SolveByGaus(A,b,vec_u,L);
         printf("SolveByGaus: end\n");
+        int k=0;
         for(int i=0;i<=ln;i++) {
             for(int j=0;j<=lm;j++) {
-                u[i][j]=vec_u[(lm+1)*i+j];
+                if(mask_u[i][j] != 0) {
+                    u[i][j] = vec_u[k];
+                    k++;
+                }
+                else {
+                    u[i][j] = Function(x[i],y[j]);
+                }
             }
         }
+        for(int i = 0; i < L; i++) {
+            delete []A[i];
+        }
+        delete []A;
+        delete []vec_u;
+        delete []b;
+        A = NULL;
+        b = NULL;
+        vec_u = NULL;
+    }
+    else if(flag == 2) { 
+        printf("Get Matrix and Vector: start\n");
+        int L = (ln + 1 - 2) * (lm + 1 - 2);
+        double *b = getVectorOfRightPart(L,mask_u,ln,lm,x,y,hx,hy);
+
+
+
+        double  **A = getMatrixOfOperator(L,mask_u,ln,lm,hx,hy);
+
+        double *vec_u=new double[L];
+        printf("Get Matrix and Vector: end\n");
+
+        printf("Convert Matrix to CRS: start\n");
+        CRS_Matrix mat = ConvertToCRS((const double **)A,L,L);
+        printf("Convert Matrix to CRS: end\n");
+
+        printf("SolveByMinResultMatrixCRS: start\n");
+        SolveByMinResultMatrix(mat,b,vec_u);
+        printf("SolveByMinResultMatrixCRS: end\n");
+
+        int k=0;
+        for(int i=0;i<=ln;i++) {
+            for(int j=0;j<=lm;j++) {
+                if(mask_u[i][j] != 0) {
+                    u[i][j] = vec_u[k];
+                    k++;
+                }
+                else {
+                    u[i][j] = Function(x[i],y[j]);
+                }
+            }
+        }
+        for(int i = 0; i < L; i++) {
+            delete []A[i];
+        }
+        delete []A;
+        delete []vec_u;
+        delete []b;
+        A = NULL;
+        b = NULL;
+        vec_u = NULL;
     }
     else {
         printf("Error solvers\n");
@@ -488,9 +560,7 @@ int main()
         for(int j = 0; j <= M; j++) {
             if(mask_u[i][j] != 0)
                 w[i][j] = u[i][j] - ut[i][j];
-            printf("%lf ",u[i][j]);
         }
-        printf("\n");
     }
 
     printf("Norm(W) = %lf \n",Norm(w,N,M));
